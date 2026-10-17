@@ -1,0 +1,770 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>GeoVerse KRB Kota Bogor</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: layar penuh 3D; HUD melayang di empat sudut; modal di tengah. Tampilan tunggal malam hari (kota hujan). */
+:root{
+  --ink:#0b161b;          /* latar malam */
+  --panel:#13242b;        /* panel HUD */
+  --panel-2:#1b323b;
+  --line:#2c4a55;
+  --fg:#e9f1ef;
+  --muted:#9bb3b0;
+  --accent:#f2b544;       /* oranye siaga */
+  --accent-ink:#1e1505;
+  --low:#3fae5a; --mid:#e8c22e; --high:#d9452f; --none:#5d6f72;
+  --display:"Chakra Petch", "Segoe UI", system-ui, sans-serif;
+  --body:"Plus Jakarta Sans", "Segoe UI", system-ui, sans-serif;
+  color-scheme: dark;
+}
+html,body{height:100%}
+body{margin:0;background:var(--ink);color:var(--fg);font-family:var(--body);font-size:14px;overflow:hidden;-webkit-tap-highlight-color:transparent}
+#stage{position:fixed;inset:0}
+#stage canvas{display:block;touch-action:none}
+button{font:inherit;color:inherit;cursor:pointer}
+.hud{position:fixed;z-index:5;display:flex;gap:8px;pointer-events:none}
+.hud>*{pointer-events:auto}
+.tl{top:calc(12px + env(safe-area-inset-top,0px));left:max(16px,env(safe-area-inset-left,0px));flex-direction:column;align-items:flex-start}
+.tr{top:calc(12px + env(safe-area-inset-top,0px));right:max(16px,env(safe-area-inset-right,0px));flex-wrap:wrap;justify-content:flex-end;max-width:60vw}
+.bl{bottom:calc(14px + env(safe-area-inset-bottom,0px));left:max(16px,env(safe-area-inset-left,0px));right:max(16px,env(safe-area-inset-right,0px));flex-direction:column;align-items:flex-start}
+.brand{background:color-mix(in srgb,var(--panel) 88%,transparent);border:1px solid var(--line);border-radius:10px;padding:8px 12px;backdrop-filter:blur(6px)}
+.brand b{font-family:var(--display);letter-spacing:.06em;font-size:15px;display:block}
+.brand span{color:var(--muted);font-size:12px}
+.loc{font-family:var(--display);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);background:color-mix(in srgb,var(--panel) 88%,transparent);border:1px solid var(--line);border-radius:999px;padding:4px 10px}
+.hbtn{background:color-mix(in srgb,var(--panel) 90%,transparent);border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-family:var(--display);font-size:12px;letter-spacing:.08em;text-transform:uppercase;backdrop-filter:blur(6px)}
+.hbtn:hover,.hbtn:focus-visible{border-color:var(--accent);outline:none}
+.hbtn.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.chips{display:flex;gap:6px;flex-wrap:wrap;max-width:min(760px,100%)}
+.chip{background:color-mix(in srgb,var(--panel) 92%,transparent);border:1px solid var(--line);border-radius:999px;padding:6px 11px;font-size:12px;font-weight:600}
+.chip.on{background:var(--fg);color:var(--ink);border-color:var(--fg)}
+.chip:focus-visible{outline:2px solid var(--accent)}
+.legend{display:flex;gap:10px;align-items:center;font-size:12px;color:var(--muted);background:color-mix(in srgb,var(--panel) 88%,transparent);border:1px solid var(--line);border-radius:8px;padding:6px 10px;flex-wrap:wrap}
+.sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+#prompt{position:fixed;left:50%;bottom:calc(120px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:6;background:var(--accent);color:var(--accent-ink);font-weight:700;border-radius:999px;padding:8px 16px;font-size:13px;border:0;box-shadow:0 6px 24px #0008}
+#tip{position:fixed;z-index:6;pointer-events:none;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:4px 8px;font-size:12px;white-space:nowrap}
+/* modal */
+.modal{position:fixed;inset:0;z-index:20;display:grid;place-items:center;background:#03080acc;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;max-width:min(560px,100%);width:100%;max-height:100%;overflow:auto;box-shadow:0 20px 60px #000a}
+.card header{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--panel)}
+.card h2{font-family:var(--display);font-size:17px;letter-spacing:.04em;margin:0;text-wrap:balance}
+.card .body{padding:14px 16px;display:grid;gap:12px}
+.x{background:transparent;border:1px solid var(--line);border-radius:8px;width:32px;height:32px;flex:none}
+.muted{color:var(--muted)}
+.eyebrow{font-family:var(--display);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+/* intro */
+#intro{background:radial-gradient(120% 90% at 70% 10%,#173540 0%,var(--ink) 60%)}
+#intro .card{max-width:min(620px,100%)}
+#intro h1{font-family:var(--display);font-size:clamp(26px,5vw,40px);line-height:1.05;margin:4px 0 6px;letter-spacing:.02em;text-wrap:balance}
+#intro p{margin:0;line-height:1.55;max-width:62ch}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+input[type=text]{flex:1;min-width:0;background:var(--ink);border:1px solid var(--line);border-radius:8px;padding:10px 12px;color:var(--fg);font:inherit}
+input[type=text]:focus{outline:2px solid var(--accent);border-color:transparent}
+.cta{background:var(--accent);color:var(--accent-ink);border:0;border-radius:8px;padding:10px 16px;font-family:var(--display);font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.cta:disabled{opacity:.5;cursor:progress}
+.keys{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:6px 14px;font-size:12px;color:var(--muted)}
+kbd{font-family:var(--display);background:var(--ink);border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 5px;color:var(--fg);font-size:11px}
+.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.stat{background:var(--panel-2);border-radius:8px;padding:8px 10px}
+.stat small{display:block;color:var(--muted);font-size:11px}
+.stat b{font-variant-numeric:tabular-nums;font-size:15px}
+.pill{display:inline-block;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:700;color:#10120d}
+.pill.Rendah{background:var(--low)} .pill.Sedang{background:var(--mid)} .pill.Tinggi{background:var(--high);color:#fff} .pill.none{background:var(--none);color:#e6eeee}
+table.hz{width:100%;border-collapse:collapse;font-size:12px}
+table.hz td{padding:5px 4px;border-top:1px solid var(--line)}
+table.hz td:last-child{text-align:right}
+/* viewer */
+#viewer .card{max-width:min(760px,100%);display:flex;flex-direction:column}
+.imgwrap{background:#fff;overflow:auto;max-height:74vh;cursor:zoom-in;display:flex;justify-content:center}
+.imgwrap img{display:block;width:auto;height:auto;max-width:100%;max-height:74vh}
+.imgwrap.zoom{cursor:zoom-out;display:block}
+.imgwrap.zoom img{width:180%;max-width:none;max-height:none}
+.vbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:space-between;padding:10px 16px;border-top:1px solid var(--line)}
+a.link{color:var(--accent);font-weight:600}
+/* chat */
+#chat .card{max-width:min(520px,100%);display:flex;flex-direction:column;height:min(640px,100%)}
+#log{flex:1;overflow:auto;padding:14px 16px;display:flex;flex-direction:column;gap:10px;min-height:0}
+.msg{max-width:88%;padding:9px 12px;border-radius:12px;line-height:1.5;white-space:pre-line}
+.msg.bot{background:var(--panel-2);align-self:flex-start;border-top-left-radius:4px}
+.msg.me{background:var(--accent);color:var(--accent-ink);align-self:flex-end;border-top-right-radius:4px}
+.sugg{display:flex;gap:6px;flex-wrap:wrap;padding:0 16px 10px}
+.sugg button{background:transparent;border:1px solid var(--line);border-radius:999px;padding:5px 10px;font-size:12px}
+.sugg button:hover{border-color:var(--accent)}
+form.ask{display:flex;gap:8px;padding:10px 16px 14px;border-top:1px solid var(--line)}
+/* lists */
+.list{display:grid;gap:6px}
+.list a,.list button{display:flex;justify-content:space-between;gap:10px;align-items:center;text-align:left;background:var(--panel-2);border:1px solid transparent;border-radius:8px;padding:9px 12px;color:var(--fg);text-decoration:none}
+.list a:hover,.list button:hover{border-color:var(--accent)}
+.badge{display:flex;gap:10px;align-items:center;background:var(--panel-2);border-radius:10px;padding:10px 12px}
+.badge .ic{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-family:var(--display);font-weight:700;background:var(--line);flex:none}
+.badge.ok .ic{background:var(--accent);color:var(--accent-ink)}
+.bar{height:6px;background:var(--ink);border-radius:9px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent)}
+#mm{width:100%;height:auto;aspect-ratio:1/1;background:#0e1d22;border-radius:10px;cursor:crosshair;max-width:100%}
+#joy{position:fixed;z-index:6;left:max(22px,env(safe-area-inset-left,0px));bottom:calc(130px + env(safe-area-inset-bottom,0px));width:110px;height:110px;border-radius:50%;border:2px solid #ffffff40;background:#0006;touch-action:none}
+#joy i{position:absolute;left:50%;top:50%;width:46px;height:46px;margin:-23px 0 0 -23px;border-radius:50%;background:#ffffffa0}
+#toast{position:fixed;z-index:30;left:50%;top:calc(70px + env(safe-area-inset-top,0px));transform:translateX(-50%);background:var(--fg);color:var(--ink);font-weight:700;border-radius:10px;padding:9px 14px;font-size:13px;box-shadow:0 10px 30px #0009;max-width:calc(100% - 32px);text-align:center}
+#loading{position:fixed;inset:0;z-index:40;display:grid;place-items:center;background:var(--ink);font-family:var(--display);letter-spacing:.12em;color:var(--muted)}
+@media (max-width:640px){.chips{flex-wrap:nowrap;overflow-x:auto;max-width:100%;padding-bottom:2px}.chip{flex:none}.legend{font-size:11px;padding:5px 8px}#joy{bottom:calc(170px + env(safe-area-inset-bottom,0px))}#prompt{bottom:calc(290px + env(safe-area-inset-bottom,0px))}.tr{max-width:70vw}.tr .hbtn{padding:6px 8px;font-size:11px}.brand span{display:none}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div id="stage"></div>
+<div id="loading">MENYIAPKAN RUANG 3D… <span id="lp">0%</span></div>
+
+<div class="hud tl">
+  <div class="brand"><b>GEOVERSE KRB</b><span>Metaverse Kajian Risiko Bencana Kota Bogor</span></div>
+  <div class="loc" id="loc">Plaza</div>
+</div>
+<div class="hud tr">
+  <button class="hbtn" id="bMap" title="Peta lokasi (M)">Peta Lokasi</button>
+  <button class="hbtn" id="bGoal">Capaian <span id="goalN">0/5</span></button>
+  <button class="hbtn" id="bRobot">Tanya Geo</button>
+  <button class="hbtn" id="bRain">Hujan</button>
+  <button class="hbtn" id="bHelp">Bantuan</button>
+  <span id="vrSlot"></span>
+</div>
+<div class="hud bl">
+  <div class="row">
+    <button class="chip on" data-mode="risk" id="mRisk">Tingkat risiko</button>
+    <button class="chip" data-mode="ikm" id="mIkm">Kesiapsiagaan (IKM)</button>
+    <button class="chip" data-mode="pend" id="mPend">Penduduk terpapar</button>
+  </div>
+  <div class="chips" id="hzChips"></div>
+  <div class="legend" id="legend"></div>
+</div>
+<button id="prompt" hidden></button>
+<div id="tip" hidden></div>
+<div id="joy" hidden><i></i></div>
+<div id="toast" hidden></div>
+
+<!-- Intro -->
+<div class="modal" id="intro">
+  <div class="card">
+    <div class="body" style="gap:14px">
+      <div class="eyebrow">Media pembelajaran · Laboratorium Geoinformatika TI UIKA</div>
+      <h1>GeoVerse KRB Kota Bogor</h1>
+      <p>Jelajahi Kajian Risiko Bencana Kota Bogor 2023–2027 sebagai ruang 3D. Berjalanlah mengelilingi maket 68 kelurahan yang tingginya menunjukkan tingkat risiko, buka galeri peta kerentanan, dan tanyakan apa saja kepada robot pemandu Geo.</p>
+      <div class="row">
+        <input type="text" id="nameIn" maxlength="24" placeholder="Nama Anda" autocomplete="nickname" aria-label="Nama Anda">
+        <button class="cta" id="enter" disabled>Masuk ke galeri</button>
+      </div>
+      <div class="keys">
+        <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> berjalan · <kbd>Shift</kbd> lari</div>
+        <div>Seret layar untuk memutar kamera</div>
+        <div>Klik lantai untuk berjalan ke titik itu</div>
+        <div><kbd>E</kbd> interaksi · <kbd>M</kbd> peta lokasi</div>
+      </div>
+      <p class="muted" style="font-size:12px">Sumber: Folder KRB Kota Bogor (Bapperida Kota Bogor &amp; Fakultas Teknik Universitas Pakuan, 2023–2025): Matriks Kelurahan, shapefile batas kelurahan, peta kerentanan, dan Album Peta.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Info kelurahan -->
+<div class="modal" id="info" hidden>
+  <div class="card"><header><div><div class="eyebrow" id="iKec"></div><h2 id="iName"></h2></div><button class="x" data-close aria-label="Tutup">✕</button></header>
+  <div class="body" id="iBody"></div></div>
+</div>
+
+<!-- Image viewer -->
+<div class="modal" id="viewer" hidden>
+  <div class="card"><header><div><div class="eyebrow" id="vEy"></div><h2 id="vTitle"></h2></div><button class="x" data-close aria-label="Tutup">✕</button></header>
+  <div class="imgwrap" id="vWrap"><img id="vImg" alt=""></div>
+  <div class="vbar"><div class="row"><button class="hbtn" id="vPrev">◀ Sebelumnya</button><button class="hbtn" id="vNext">Berikutnya ▶</button></div>
+  <div class="row" style="align-items:center"><span class="muted" style="font-size:12px">Klik gambar untuk memperbesar</span><a class="link" id="vLink" target="_blank" rel="noopener">Buka versi asli di Drive ↗</a></div></div>
+  <div class="body" style="padding-top:0"><p class="muted" id="vCap" style="margin:0;line-height:1.5"></p></div></div>
+</div>
+
+<!-- Kiosk -->
+<div class="modal" id="kiosk" hidden>
+  <div class="card"><header><div><div class="eyebrow">Kios data</div><h2 id="kTitle"></h2></div><button class="x" data-close aria-label="Tutup">✕</button></header>
+  <div class="body" id="kBody"></div></div>
+</div>
+
+<!-- Chat robot -->
+<div class="modal" id="chat" hidden>
+  <div class="card"><header><div><div class="eyebrow">Robot pemandu</div><h2>Geo · asisten KRB</h2></div><button class="x" data-close aria-label="Tutup">✕</button></header>
+  <div id="log" aria-live="polite"></div>
+  <div class="sugg" id="sugg"></div>
+  <form class="ask" id="askF"><input type="text" id="askIn" placeholder="Tanya: risiko longsor Gudang?" autocomplete="off" aria-label="Pertanyaan"><button class="cta" type="submit">Kirim</button></form></div>
+</div>
+
+<!-- Minimap -->
+<div class="modal" id="mapM" hidden>
+  <div class="card"><header><h2>Peta lokasi</h2><button class="x" data-close aria-label="Tutup">✕</button></header>
+  <div class="body"><canvas id="mm" width="600" height="600"></canvas><div class="list" id="tpList"></div></div></div>
+</div>
+
+<!-- Achievements -->
+<div class="modal" id="goalM" hidden>
+  <div class="card"><header><h2>Capaian belajar</h2><button class="x" data-close aria-label="Tutup">✕</button></header>
+  <div class="body" id="goalBody"></div></div>
+</div>
+
+<!-- Help -->
+<div class="modal" id="helpM" hidden>
+  <div class="card"><header><h2>Cara bermain</h2><button class="x" data-close aria-label="Tutup">✕</button></header>
+  <div class="body" style="line-height:1.6">
+    <div><b>Berjalan.</b> Tombol W A S D atau panah, Shift untuk berlari. Di ponsel, pakai joystick kiri bawah. Klik/tap lantai untuk berjalan otomatis.</div>
+    <div><b>Kamera.</b> Seret layar untuk menoleh. Gulir untuk mendekat/menjauh.</div>
+    <div><b>Maket kota.</b> Pilih jenis bahaya di bawah. Tinggi dan warna blok mengikuti tingkat risiko per kelurahan dari Matriks Kelurahan KRB. Klik blok untuk detail.</div>
+    <div><b>Galeri.</b> Gedung di timur memuat 8 peta kerentanan resmi. Klik panel untuk melihat gambar penuh.</div>
+    <div><b>Kios.</b> Paviliun barat memuat 4 kios (bahaya, kerentanan, kapasitas, risiko) dengan tautan ke peta layout resolusi penuh di Drive KRB.</div>
+    <div><b>VR.</b> Tombol "Masuk VR" muncul bila perangkat mendukung WebXR. Di VR, arahkan kontroler ke lantai lalu tekan trigger untuk berpindah.</div>
+  </div></div>
+</div>
+
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import { VRButton } from 'three/addons/webxr/VRButton.js';
+
+/* ---------- konstanta & data statis ---------- */
+const HZ=[
+ {k:'multi',n:'Multi bahaya'},{k:'banjir',n:'Banjir'},{k:'bandang',n:'Banjir bandang'},{k:'longsor',n:'Tanah longsor'},
+ {k:'cuaca',n:'Cuaca ekstrem'},{k:'gempa',n:'Gempa bumi'},{k:'gunungapi',n:'Letusan gunung api'},{k:'galtek',n:'Kegagalan teknologi'},{k:'kekeringan',n:'Kekeringan'}];
+const COL={Rendah:0x3fae5a,Sedang:0xe8c22e,Tinggi:0xd9452f,none:0x55676a};
+const DRV='https://drive.google.com/file/d/', FLD='https://drive.google.com/drive/folders/';
+const MAPS=[
+ {img:'img/ker_banjir.jpg',t:'Peta Kerentanan Banjir',id:'1QSed5zTvyIDp2ru8QMmLPpOH-BUI7pT4',hz:'banjir'},
+ {img:'img/ker_longsor.jpg',t:'Peta Kerentanan Tanah Longsor',id:'1lywxSWUbvXgcrgsH2lu3rKqx-lo9rB83',hz:'longsor'},
+ {img:'img/ker_cuaca.jpg',t:'Peta Kerentanan Cuaca Ekstrem',id:'1arciFD7ynA7XaHeDO6mwLtsH4NTupzAy',hz:'cuaca'},
+ {img:'img/ker_gempa.jpg',t:'Peta Kerentanan Gempa Bumi',id:'1W0fVWVD-bo8AKmmS3822LoLYPbTJJcfT',hz:'gempa'},
+ {img:'img/ker_gunungapi.jpg',t:'Peta Kerentanan Letusan Gunung Api',id:'1etGLYQw1GBKpTeGqVv7tdTk6RSlkHpkJ',hz:'gunungapi'},
+ {img:'img/ker_galtek.jpg',t:'Peta Kerentanan Kegagalan Teknologi',id:'1BVJesp5a2seDHH6nH_WY0YB51g0RyDgJ',hz:'galtek'},
+ {img:'img/ker_kekeringan.jpg',t:'Peta Kerentanan Kekeringan',id:'13mskYzHK8R1ZOsw-8qB0HO180rGEmXJe',hz:'kekeringan'},
+ {img:'img/ker_multi.jpg',t:'Peta Multi Kerentanan',id:'1rmNj6Lko7uouyNUjEuCJUO4Un0Iu5OlB',hz:'multi'}];
+const EXTRA=[
+ {img:'img/cover_depan.jpg',t:'Album Peta Kajian Risiko Bencana Kota Bogor 2023–2027',id:'1eNgj8LsBZKnRSA6X7y4eRAKDxqobaSjD',cap:'Sampul Album Peta KRB, kerja sama Bappeda Kota Bogor dengan Fakultas Teknik Universitas Pakuan.'},
+ {img:'img/tren_kejadian.png',t:'Tren kejadian bencana 2018–2022',id:null,cap:'Kejadian tercatat BPBD Kota Bogor (Laporan Akhir KRB, Tabel 2.9–2.11): longsor naik dari 182 (2018) menjadi 373 (2022).'}];
+const KIOSK={
+ bahaya:{t:'Peta Bahaya',c:0xd9452f,f:'1f6Ehwj1a4nF58jb2oXCX6bfPyk2nvrnH',d:'Bahaya disusun dari probabilitas dan intensitas kejadian (Perka BNPB 2/2012, modul BNPB 2019). Banjir memakai Geomorphic Flood Index, longsor zona longsor + runout, gempa AVS30, kekeringan SPI-3.',
+  items:[['Banjir','1_Nb9k9Gm6VswGQbuEVnEnFqoIooUhNZw'],['Banjir bandang','1IlQ1fbF7gHFqgmDqJ-0fioEq2lGTMFwE'],['Tanah longsor','1bE76r28_3RnAonneUnpPJnKR8e-ACq_o'],['Cuaca ekstrem','1Tz82cB6BflwsgM8Gcjw94LY73IcvYnNs'],['Gempa bumi','17xI37R8DAB_7RyJMwxk-IxO2pDUxztQT'],['Letusan gunung api','1lqZMrDVExRWlvwYV41xjz35McLvER0v9'],['Kegagalan teknologi','1_RY53jSEJkJz2hS1f5WP0iAxhVMXKMcn'],['Kekeringan','1OV0DAFCkdxqAN65mgLp-H3u17bvYE-T9'],['Multi bahaya','1MgOEPsS9OhDLdz1pH2-SwPgwLfvJlfxX']]},
+ kerentanan:{t:'Peta Kerentanan',c:0xe8c22e,f:'1ceuNUIM3ipNPtrQssMRXY8IYAOqf8UBA',d:'Kerentanan menggabungkan komponen sosial, fisik, ekonomi, dan lingkungan dengan MCDA. Penduduk terpapar diturunkan dari WorldPop, rumah dari rasio PODES 2008.',
+  items:[['Banjir','1oa5kLXFRgLES4VmvVhS_dBhw-GqLf_ox'],['Banjir bandang','19Y_cEnCp4QRXZ18lrXGMLeSHR3CkB6w9'],['Tanah longsor','1juotRTcV9BAlUqCoP26dHNosQUjS8-WR'],['Cuaca ekstrem','1j5EsvaXKMIDB5v0BPnIZ90KFI8OKttlD'],['Gempa bumi','1KJKUj4ZOQKbR_WLITm5h_CN68QFw-wg5'],['Letusan gunung api','1sz0i4Sr7JDOMUoGkpToRlmMEh-coeRjW'],['Kegagalan teknologi','1aXDehUusRhXmfqz2MMtHydFkMxJqCX6n'],['Kekeringan','19se4vCdLUucWUI1zOCsAv6s0w3Uv978J'],['Multi bahaya','12WMj5DCcdBchOBy0_g0wybKjbbabi4Ut']]},
+ kapasitas:{t:'Peta Kapasitas',c:0x3fae5a,f:'153aqwq2yv9RwmpTXDIywphIWNt_foG3C',d:'Kapasitas = 0,6 × Indeks Kesiapsiagaan Masyarakat (IKM, per kelurahan) + 0,4 × Indeks Ketahanan Daerah (IKD 0,62, sama untuk semua kelurahan).',
+  items:[['Banjir','1xtbhwncxPB2bQD1owdKUmG8_f-lqda6h'],['Banjir bandang','1Yh_RhlH8scVwU6TwrwRvhXfTObfjXZNA'],['Tanah longsor','1kW67nGLdkEcyJPtmZsH7XhVII23s82gA'],['Cuaca ekstrem','13DFG7yQAXFzrzxwS24plvcSt5x8jl1c8'],['Gempa bumi','1Nh01m9du7aT8bV3g-XFVtj68eAiMq_qT'],['Letusan gunung api','159mcVkOOJUzZMssutXPFuJrXLHZCsSdi'],['Kegagalan teknologi','1N7MDSxwC4LDsHABm7j-X6HlF0Kg_cJWt'],['Kekeringan','1tObX4qBOzOY8IRxRmeug9Zsbx9_20hAK'],['Multi kapasitas','1SrqgIEHTKGCoGA4dPLPIoju3RLxk0kEI']]},
+ risiko:{t:'Peta Risiko',c:0x5aa9e6,f:'1PcJh3PBXQ2hLIcV1py8PAgzk7Gvumc_d',d:'Risiko = perbandingan tingkat kerugian (bahaya × kerentanan) dengan kapasitas. Kelas risiko kecamatan diambil dari kelas tertinggi kelurahannya.',
+  items:[['Banjir','13gnyBpSOJliuMVEgFrl4YDoqJGTsouCX'],['Banjir bandang','1EwjWRWs1g5iOVcr8aJ5BswMVystORDm3'],['Tanah longsor','1zxCHuffWbHn7CPkES3eWM4UVmMqjFyA8'],['Cuaca ekstrem','19lFYrTuI5r98-bBQ1Sh4V-at6RIfRq8w'],['Gempa bumi','12JUvZnmu3GFtfxSMiqh_cYhS25fD5npH'],['Letusan gunung api','1svHvQc2H-unsj_3bFcCzxOjZylwORQGj'],['Kegagalan teknologi','1BpFd-wxroiDu5ZubWQni2tKIIUYqyY1J'],['Kekeringan','1yMHEMODoxWWfcTPINh2nLq9ULFs7l9Ht'],['Multi risiko','18G51tRXqOVeu8Xe2eaNFHvT_-8J4oWcP']]}};
+const TREN={longsor:[182,44,300,269,373],cuaca:[149,27,173,122,223],banjir:[52,3,37,24,32]};
+
+/* ---------- util ---------- */
+const $=s=>document.querySelector(s);
+const fmt=n=>Math.round(n).toLocaleString('id-ID');
+const store={get(k,d){try{const v=localStorage.getItem('gv_'+k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem('gv_'+k,JSON.stringify(v))}catch(e){}}};
+function toast(t){const el=$('#toast');el.textContent=t;el.hidden=false;clearTimeout(toast._t);toast._t=setTimeout(()=>el.hidden=true,2600)}
+function openM(id){document.querySelectorAll('.modal').forEach(m=>{if(m.id!=='intro')m.hidden=m.id!==id});keys.clear();uiOpen=true}
+function closeM(){document.querySelectorAll('.modal').forEach(m=>{if(m.id!=='intro')m.hidden=true});uiOpen=false}
+document.querySelectorAll('[data-close]').forEach(b=>b.onclick=closeM);
+document.querySelectorAll('.modal').forEach(m=>m.addEventListener('pointerdown',e=>{if(e.target===m&&m.id!=='intro')closeM()}));
+let uiOpen=true;
+
+/* ---------- renderer & scene ---------- */
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth,innerHeight);
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.05;
+renderer.xr.enabled=true;
+$('#stage').appendChild(renderer.domElement);
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0xbfdcd8);scene.fog=new THREE.Fog(0xc9e1da,60,175);
+{const sky=new THREE.Mesh(new THREE.SphereGeometry(300,32,16),new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,fog:false,
+  uniforms:{top:{value:new THREE.Color(0x5fa8d8)},mid:{value:new THREE.Color(0xbfe0e6)},bot:{value:new THREE.Color(0xf6dcae)}},
+  vertexShader:'varying vec3 vp;void main(){vp=normalize(position);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
+  fragmentShader:'uniform vec3 top;uniform vec3 mid;uniform vec3 bot;varying vec3 vp;void main(){float h=vp.y;vec3 c=h>0.08?mix(mid,top,smoothstep(0.08,0.7,h)):mix(bot,mid,smoothstep(-0.05,0.08,h));gl_FragColor=vec4(c,1.0);}'}));
+ scene.add(sky);}
+const camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,0.1,400);
+const rig=new THREE.Group();rig.add(camera);scene.add(rig);
+scene.add(new THREE.HemisphereLight(0xe3f4ff,0x4c6b34,1.15));
+const sun=new THREE.DirectionalLight(0xffe0ad,2.4);sun.position.set(-35,55,28);sun.castShadow=true;
+sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-45,right:45,top:45,bottom:-45,near:1,far:140});scene.add(sun);
+
+const manager=new THREE.LoadingManager();
+manager.onProgress=(u,l,t)=>{$('#lp').textContent=Math.round(l/t*100)+'%'};
+const texL=new THREE.TextureLoader(manager);
+function tex(url){const t=texL.load(url);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=8;return t}
+
+/* label sprite */
+function label(text,{size=48,color='#e9f1ef',bg='rgba(19,36,43,.85)',w=1,font='600',pad=18}={}){
+  const c=document.createElement('canvas'),x=c.getContext('2d');
+  x.font=`${font} ${size}px "Chakra Petch", sans-serif`;
+  const lines=String(text).split('\n');const tw=Math.max(...lines.map(l=>x.measureText(l).width));
+  c.width=Math.ceil(tw+pad*2);c.height=Math.ceil(size*1.3*lines.length+pad*1.4);
+  x.font=`${font} ${size}px "Chakra Petch", sans-serif`;
+  if(bg){x.fillStyle=bg;const r=14;x.beginPath();x.roundRect(0,0,c.width,c.height,r);x.fill()}
+  x.fillStyle=color;x.textBaseline='middle';x.textAlign='center';
+  lines.forEach((l,i)=>x.fillText(l,c.width/2,pad*0.7+size*1.3*(i+0.5)));
+  const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;
+  const s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true,depthWrite:false}));
+  const k=w/ (size*1.3);s.scale.set(c.width*k,c.height*k,1);return s;
+}
+
+/* ---------- lingkungan ---------- */
+function gridTex(){const c=document.createElement('canvas');c.width=c.height=512;const x=c.getContext('2d');
+  x.fillStyle='#16282e';x.fillRect(0,0,512,512);x.strokeStyle='#1f3a42';x.lineWidth=2;
+  for(let i=0;i<=512;i+=64){x.beginPath();x.moveTo(i,0);x.lineTo(i,512);x.stroke();x.beginPath();x.moveTo(0,i);x.lineTo(512,i);x.stroke()}
+  x.strokeStyle='#24434c';x.lineWidth=1;for(let i=32;i<512;i+=64){x.beginPath();x.moveTo(i,0);x.lineTo(i,512);x.stroke();x.beginPath();x.moveTo(0,i);x.lineTo(512,i);x.stroke()}
+  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(36,36);t.colorSpace=THREE.SRGBColorSpace;return t}
+function grassTex(){const c=document.createElement('canvas');c.width=c.height=256;const x=c.getContext('2d');x.fillStyle='#5f9a3e';x.fillRect(0,0,256,256);
+  for(let i=0;i<5200;i++){const g=90+Math.random()*80|0;x.fillStyle=`rgba(${40+Math.random()*50|0},${g},${30+Math.random()*30|0},${.35+Math.random()*.5})`;x.fillRect(Math.random()*256,Math.random()*256,1+Math.random()*2,2+Math.random()*4)}
+  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(70,70);t.colorSpace=THREE.SRGBColorSpace;return t}
+function paveTex(rep){const c=document.createElement('canvas');c.width=c.height=256;const x=c.getContext('2d');x.fillStyle='#d8cfbb';x.fillRect(0,0,256,256);
+  for(let i=0;i<8;i++)for(let j=0;j<8;j++){const s=200+Math.random()*30|0;x.fillStyle=`rgb(${s},${s-8},${s-24})`;x.fillRect(i*32+1,j*32+1,30,30)}
+  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(rep,rep);t.colorSpace=THREE.SRGBColorSpace;return t}
+const ground=new THREE.Mesh(new THREE.CircleGeometry(160,96),new THREE.MeshStandardMaterial({map:grassTex(),roughness:1}));
+ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;ground.name='ground';scene.add(ground);
+const paveMat=new THREE.MeshStandardMaterial({map:paveTex(14),roughness:.9});
+{const pv=new THREE.Mesh(new THREE.RingGeometry(14,22,96),paveMat);pv.rotation.x=-Math.PI/2;pv.position.y=.02;pv.receiveShadow=true;scene.add(pv);
+ [[0,46,5,48],[18,0,8,6],[-18,0,8,6]].forEach(([x,z,w,d])=>{const s=new THREE.Mesh(new THREE.PlaneGeometry(w,d),new THREE.MeshStandardMaterial({map:paveTex(3),roughness:.9}));s.rotation.x=-Math.PI/2;s.position.set(x,.025,z);s.receiveShadow=true;scene.add(s)});}
+// pegunungan latar: Salak (barat daya) dan Gede-Pangrango (tenggara)
+function mountain(x,z,r,h,name){const m=new THREE.Mesh(new THREE.ConeGeometry(r,h,9,1),new THREE.MeshStandardMaterial({color:0x4f7d5c,roughness:1,flatShading:true}));
+  m.position.set(x,h/2-1,z);scene.add(m);const l=label(name,{size:40,w:3.2,bg:'rgba(19,36,43,.6)',color:'#f4f8f4'});l.position.set(x,h+2,z);scene.add(l)}
+mountain(-80,130,44,52,'Gunung Salak');mountain(88,140,52,60,'Gunung Gede-Pangrango');mountain(10,160,34,34,'');
+
+/* ---------- dunia: zona ---------- */
+const colliders=[];   // AABB {x0,x1,z0,z1}
+const interact=[];    // {pos,r,label,act,zone}
+const clickables=[];  // mesh dengan userData.act
+function box(w,h,d,color,x,y,z,opt={}){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshStandardMaterial({color,roughness:.85,...opt}));m.position.set(x,y,z);m.castShadow=m.receiveShadow=true;scene.add(m);return m}
+function collide(x0,x1,z0,z1){colliders.push({x0,x1,z0,z1})}
+
+/* plaza tengah: dasar maket */
+const MS=1/800;     // skala maket: 1 m dunia = 800 m nyata
+const dais=new THREE.Mesh(new THREE.CylinderGeometry(15,15.6,0.5,64),new THREE.MeshStandardMaterial({color:0x8d8573,roughness:.8}));
+dais.position.y=0.25;dais.receiveShadow=true;scene.add(dais);
+const ring=new THREE.Mesh(new THREE.TorusGeometry(15.3,.08,8,96),new THREE.MeshStandardMaterial({color:0x7cc46a,emissive:0x3f8f3a,emissiveIntensity:.5}));ring.rotation.x=Math.PI/2;ring.position.y=.52;scene.add(ring);
+collide(-14.2,14.2,-14.2,14.2);
+const mapGroup=new THREE.Group();mapGroup.position.y=0.5;scene.add(mapGroup);
+const hzTitle=label('Multi bahaya',{size:56,w:1.6});hzTitle.position.set(0,6.2,0);scene.add(hzTitle);
+
+/* galeri timur */
+const G={x0:20,x1:44,z0:-14,z1:14,h:7};
+box(G.x1-G.x0,0.2,G.z1-G.z0,0x1b2d33,(G.x0+G.x1)/2,0.1,0); // lantai
+const wallC=0xd9d4c7;
+box(0.4,G.h,G.z1-G.z0,wallC,G.x1,G.h/2,0);              // belakang
+box(G.x1-G.x0,G.h,0.4,wallC,(G.x0+G.x1)/2,G.h/2,G.z0);   // utara
+box(G.x1-G.x0,G.h,0.4,wallC,(G.x0+G.x1)/2,G.h/2,G.z1);   // selatan
+box(0.4,G.h,10,wallC,G.x0,G.h/2,-9); box(0.4,G.h,10,wallC,G.x0,G.h/2,9); box(0.4,1.6,8,wallC,G.x0,G.h-0.8,0);
+collide(G.x1-0.3,G.x1+0.5,G.z0,G.z1);collide(G.x0,G.x1,G.z0-0.5,G.z0+0.4);collide(G.x0,G.x1,G.z1-0.4,G.z1+0.5);
+collide(G.x0-0.4,G.x0+0.4,G.z0,-4);collide(G.x0-0.4,G.x0+0.4,4,G.z1);
+const roofLight=new THREE.PointLight(0xfff3df,40,30,1.6);roofLight.position.set(32,6.2,0);scene.add(roofLight);
+const gl=label('GALERI PETA KERENTANAN',{size:52,w:1.1,bg:'rgba(242,181,68,.95)',color:'#1e1505'});gl.position.set(G.x0-0.6,G.h-0.8,0);scene.add(gl);
+
+function framedPanel(item,x,y,z,ry,w,h,zone){
+  const g=new THREE.Group();g.position.set(x,y,z);g.rotation.y=ry;scene.add(g);
+  const fr=new THREE.Mesh(new THREE.BoxGeometry(w+0.24,h+0.24,0.12),new THREE.MeshStandardMaterial({color:0x14262c,roughness:.6}));g.add(fr);
+  const pic=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshStandardMaterial({map:tex(item.img),roughness:.9}));pic.position.z=0.07;g.add(pic);
+  pic.userData.act=()=>openViewer(item);clickables.push(pic);
+  const lb=label(item.t.replace('Peta ',''),{size:40,w:0.4});lb.position.set(0,h/2+0.42,0.1);g.add(lb);
+  const front=new THREE.Vector3(0,0,1.8).applyAxisAngle(new THREE.Vector3(0,1,0),ry).add(new THREE.Vector3(x,0,z));
+  interact.push({pos:front,r:2.2,label:'Lihat '+item.t,act:()=>openViewer(item),zone});
+  return g;
+}
+const PW=2.7,PH=PW*1600/1130;
+MAPS.forEach((m,i)=>{const north=i<4;const xi=24+(i%4)*5.6;
+  framedPanel(m,xi,PH/2+0.55,north?G.z0+0.3:G.z1-0.3,north?0:Math.PI,PW,PH,'Galeri')});
+framedPanel(EXTRA[1],G.x1-0.3,3.3,0,-Math.PI/2,8.4,8.4*670/1344,'Galeri');
+// bangku
+box(3,0.45,1,0x3a2c22,32,0.32,0);collide(30.5,33.5,-.5,.5);
+
+/* paviliun barat (lobi + kios) */
+box(18,0.2,26,0x1b2d33,-29,0.1,0);
+const roof=box(18,0.3,26,0x14262c,-29,6.2,0);roof.castShadow=false;
+[[-37.5,-12.5],[-37.5,12.5],[-20.5,-12.5],[-20.5,12.5]].forEach(([x,z])=>{box(.5,6,.5,0xd9d4c7,x,3,z);collide(x-.4,x+.4,z-.4,z+.4)});
+const lobLight=new THREE.PointLight(0xfff3df,30,26,1.6);lobLight.position.set(-29,5.6,0);scene.add(lobLight);
+framedPanel(EXTRA[0],-36.6,3.3,0,Math.PI/2,3.4,3.4*1344/1008,'Lobi');
+box(.4,6,8,0x22383f,-37.2,3,0);collide(-37.6,-36.3,-4.2,4.2);
+const ll=label('PAVILIUN DATA KRB',{size:52,w:1.1,bg:'rgba(242,181,68,.95)',color:'#1e1505'});ll.position.set(-20.4,6.9,0);scene.add(ll);
+function kiosk(key,x,z,ry){const K=KIOSK[key];const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=ry;scene.add(g);
+  const base=new THREE.Mesh(new THREE.BoxGeometry(1.6,1.1,0.9),new THREE.MeshStandardMaterial({color:0x22383f}));base.position.y=0.55;base.castShadow=true;g.add(base);
+  const scr=new THREE.Mesh(new THREE.BoxGeometry(1.9,1.3,0.12),new THREE.MeshStandardMaterial({color:K.c,emissive:K.c,emissiveIntensity:.35}));scr.position.set(0,1.75,0.1);scr.rotation.x=-0.25;g.add(scr);
+  const lb=label(K.t.toUpperCase()+'\nKetuk untuk tautan',{size:44,w:.36,bg:null,color:'#0b161b'});lb.position.set(0,1.78,0.22);g.add(lb);
+  scr.userData.act=base.userData.act=()=>openKiosk(key);clickables.push(scr,base);
+  const p=new THREE.Vector3(0,0,1.6).applyAxisAngle(new THREE.Vector3(0,1,0),ry).add(new THREE.Vector3(x,0,z));
+  interact.push({pos:p,r:2,label:'Buka kios '+K.t,act:()=>openKiosk(key),zone:'Paviliun'});collide(x-.9,x+.9,z-.9,z+.9)}
+kiosk('bahaya',-31,-9,0.4);kiosk('kerentanan',-25,-9,-0.4);kiosk('kapasitas',-31,9,Math.PI-0.4);kiosk('risiko',-25,9,Math.PI+0.4);
+
+/* robot Geo */
+const robot=new THREE.Group();robot.position.set(0,0,-19);scene.add(robot);
+{const mBody=new THREE.MeshStandardMaterial({color:0xe9f1ef,roughness:.35,metalness:.2});const mDark=new THREE.MeshStandardMaterial({color:0x0b161b,roughness:.3});
+ const body=new THREE.Mesh(new THREE.CapsuleGeometry(.55,.9,6,16),mBody);body.position.y=1.2;body.castShadow=true;robot.add(body);
+ const head=new THREE.Mesh(new THREE.SphereGeometry(.5,24,16),mBody);head.position.y=2.35;head.castShadow=true;robot.add(head);
+ const visor=new THREE.Mesh(new THREE.SphereGeometry(.42,24,12,0,Math.PI*2,0,Math.PI/2.4),mDark);visor.rotation.x=Math.PI/2.2;visor.position.set(0,2.38,.12);robot.add(visor);
+ const eye=new THREE.MeshStandardMaterial({color:0xf2b544,emissive:0xf2b544,emissiveIntensity:2});
+ [-.14,.14].forEach(x=>{const e=new THREE.Mesh(new THREE.SphereGeometry(.06,10,8),eye);e.position.set(x,2.4,.5);robot.add(e)});
+ const ant=new THREE.Mesh(new THREE.CylinderGeometry(.02,.02,.4),mDark);ant.position.y=2.95;robot.add(ant);
+ const bulb=new THREE.Mesh(new THREE.SphereGeometry(.07,10,8),eye);bulb.position.y=3.17;robot.add(bulb);robot.userData.bulb=bulb;
+ robot.traverse(o=>{if(o.isMesh){o.userData.act=()=>openChat();clickables.push(o)}});
+ const rl=label('Geo · robot pemandu',{size:40,w:.42});rl.position.y=3.6;robot.add(rl);}
+interact.push({pos:new THREE.Vector3(0,0,-17),r:2.6,label:'Bicara dengan Geo',act:()=>openChat(),zone:'Plaza'});
+collide(-.8,.8,-19.8,-18.2);
+
+/* papan petunjuk */
+function sign(text,x,z,ry){const p=box(.12,2.2,.12,0x9bb3b0,x,1.1,z);const l=label(text,{size:40,w:.5});l.position.set(x,2.5,z);scene.add(l)}
+sign('Galeri peta →',16,0,0);sign('← Paviliun data',-16,0,0);sign('Robot Geo ↑',0,-15.8,0);
+
+/* taman bernuansa Kebun Raya Bogor */
+const NATURE={sway:[],flies:[],clouds:[],water:null};
+let seed=1817;const rnd=()=>{seed=(seed*16807)%2147483647;return seed/2147483647};
+const POND={x:16,z:34,r:6.5};
+function freeSpot(x,z,pad=0){const r=Math.hypot(x,z);
+  if(r<24+pad)return false;if(Math.abs(x)<5+pad&&z>20&&z<72)return false;
+  if(x>G.x0-4-pad&&x<G.x1+4+pad&&z>G.z0-4-pad&&z<G.z1+4+pad)return false;
+  if(x>-41-pad&&x<-17+pad&&Math.abs(z)<16+pad)return false;
+  if(Math.abs(z)<5+pad&&Math.abs(x)<46)return false;
+  if(Math.hypot(x-POND.x,z-POND.z)<POND.r+2+pad)return false;
+  if(Math.abs(x)<4&&z<-14&&z>-26)return false;return true}
+const trunkM=new THREE.MeshStandardMaterial({color:0x6b4f36,roughness:1});
+const leafMs=[0x2f7d32,0x3b8f3c,0x4f9e3a,0x26693a,0x5aa547].map(c=>new THREE.MeshStandardMaterial({color:c,roughness:.9,flatShading:true}));
+const blobG=new THREE.IcosahedronGeometry(1,0);
+function tree(x,z,s){const g=new THREE.Group();g.position.set(x,0,z);g.scale.setScalar(s);scene.add(g);
+  const tr=new THREE.Mesh(new THREE.CylinderGeometry(.22,.38,3.2,7),trunkM);tr.position.y=1.6;tr.castShadow=true;g.add(tr);
+  const crown=new THREE.Group();crown.position.y=3.4;g.add(crown);
+  for(let i=0;i<4;i++){const b=new THREE.Mesh(blobG,leafMs[(rnd()*leafMs.length)|0]);b.position.set((rnd()-.5)*2.2,rnd()*1.4,(rnd()-.5)*2.2);b.scale.setScalar(1.3+rnd()*.9);b.castShadow=true;crown.add(b)}
+  NATURE.sway.push({o:crown,p:rnd()*6,a:.03});if(Math.hypot(x,z)<85)collide(x-.5*s,x+.5*s,z-.5*s,z+.5*s)}
+const frondG=new THREE.PlaneGeometry(.7,3.2);frondG.translate(0,1.6,0);
+const frondM=new THREE.MeshStandardMaterial({color:0x3f8f3a,roughness:.8,side:THREE.DoubleSide});
+function palm(x,z,s){const g=new THREE.Group();g.position.set(x,0,z);g.scale.setScalar(s);scene.add(g);
+  const tr=new THREE.Mesh(new THREE.CylinderGeometry(.16,.26,6,8),new THREE.MeshStandardMaterial({color:0x8a7357,roughness:1}));tr.position.y=3;tr.castShadow=true;g.add(tr);
+  const top=new THREE.Group();top.position.y=6;g.add(top);
+  for(let i=0;i<9;i++){const f=new THREE.Mesh(frondG,frondM);f.rotation.set(0,0,0);f.rotation.y=i/9*Math.PI*2;f.rotateX(1.05+rnd()*.35);f.castShadow=true;top.add(f)}
+  NATURE.sway.push({o:top,p:rnd()*6,a:.06});collide(x-.35,x+.35,z-.35,z+.35)}
+// jalan palem menuju plaza
+for(let z=26;z<=68;z+=7){palm(-4.2,z,1+rnd()*.15);palm(4.2,z,1+rnd()*.15)}
+[[17,-6],[17,6],[-17,-6],[-17,6]].forEach(([x,z])=>palm(x,z,.9));
+// pepohonan kanopi
+let placed=0;for(let i=0;i<900&&placed<120;i++){const a=rnd()*Math.PI*2,r=26+rnd()*70;const x=Math.cos(a)*r,z=Math.sin(a)*r;if(freeSpot(x,z,1)){tree(x,z,.9+rnd()*.9);placed++}}
+// bedeng bunga mengelilingi plaza
+{const n=520;const fm=new THREE.InstancedMesh(new THREE.SphereGeometry(.16,6,5),new THREE.MeshStandardMaterial({roughness:.7}),n);
+ const pal=[0xe84393,0xff8a3d,0xffd23f,0xf4f1de,0xc2185b,0x9c27b0].map(c=>new THREE.Color(c));const m4=new THREE.Matrix4();let k=0;
+ for(let i=0;i<n*3&&k<n;i++){const a=rnd()*Math.PI*2;if([0,Math.PI/2,Math.PI,Math.PI*1.5].some(c=>Math.abs(Math.atan2(Math.sin(a-c),Math.cos(a-c)))<.16))continue;
+   const r=22.6+rnd()*1.8;m4.makeTranslation(Math.cos(a)*r,.25+rnd()*.35,Math.sin(a)*r);fm.setMatrixAt(k,m4);fm.setColorAt(k,pal[(rnd()*pal.length)|0]);k++}
+ fm.count=k;fm.castShadow=true;scene.add(fm);
+ const hedge=new THREE.Mesh(new THREE.TorusGeometry(23.4,.55,6,120),new THREE.MeshStandardMaterial({color:0x2f6e33,roughness:1}));hedge.rotation.x=Math.PI/2;hedge.position.y=.15;hedge.scale.z=.6;scene.add(hedge);}
+// kolam teratai (terinspirasi Danau Gunting)
+{const w=new THREE.Mesh(new THREE.CircleGeometry(POND.r,48),new THREE.MeshStandardMaterial({color:0x3d8ea3,roughness:.12,metalness:.15,transparent:true,opacity:.92}));
+ w.rotation.x=-Math.PI/2;w.position.set(POND.x,.06,POND.z);scene.add(w);NATURE.water=w;
+ const rim=new THREE.Mesh(new THREE.TorusGeometry(POND.r,.25,6,64),new THREE.MeshStandardMaterial({color:0x9d9382}));rim.rotation.x=Math.PI/2;rim.position.set(POND.x,.12,POND.z);scene.add(rim);
+ const padG=new THREE.CircleGeometry(.6,16,.3,Math.PI*1.85),padM=new THREE.MeshStandardMaterial({color:0x3f9a3a,side:THREE.DoubleSide});
+ const lotM=new THREE.MeshStandardMaterial({color:0xf7a8c8,emissive:0x5a1f35,roughness:.6});
+ for(let i=0;i<22;i++){const a=rnd()*Math.PI*2,r=rnd()*(POND.r-1);const pd=new THREE.Mesh(padG,padM);pd.rotation.x=-Math.PI/2;pd.rotation.z=rnd()*6;pd.position.set(POND.x+Math.cos(a)*r,.09,POND.z+Math.sin(a)*r);scene.add(pd);
+   if(i%3===0){const f=new THREE.Mesh(new THREE.ConeGeometry(.18,.32,6),lotM);f.position.set(pd.position.x,.24,pd.position.z);scene.add(f)}}
+ const pl=label('Kolam teratai',{size:38,w:.45});pl.position.set(POND.x,1.6,POND.z-POND.r-.6);scene.add(pl);}
+// kupu-kupu
+{const wingG=new THREE.PlaneGeometry(.22,.16);wingG.translate(.11,0,0);
+ const cols=[0xffd23f,0xff8a3d,0x8bd3ff,0xf4f1de];
+ for(let i=0;i<26;i++){const g=new THREE.Group();const m=new THREE.MeshStandardMaterial({color:cols[i%4],side:THREE.DoubleSide,emissive:cols[i%4],emissiveIntensity:.25});
+   const L=new THREE.Mesh(wingG,m),R=new THREE.Mesh(wingG,m);R.scale.x=-1;g.add(L,R);scene.add(g);
+   NATURE.flies.push({g,L,R,a:rnd()*Math.PI*2,r:18+rnd()*10,h:.8+rnd()*1.6,s:.15+rnd()*.25,p:rnd()*6})}}
+// awan
+for(let i=0;i<9;i++){const g=new THREE.Group();const cm=new THREE.MeshStandardMaterial({color:0xffffff,roughness:1,transparent:true,opacity:.92});
+  for(let j=0;j<5;j++){const s=new THREE.Mesh(new THREE.SphereGeometry(3+rnd()*3,10,8),cm);s.position.set(j*4-8,rnd()*2,rnd()*3);g.add(s)}
+  g.position.set(-150+rnd()*300,48+rnd()*18,-150+rnd()*260);scene.add(g);NATURE.clouds.push({g,v:.8+rnd()*1.2})}
+// gerbang taman
+{const gx=0,gz=26;[-3.2,3.2].forEach(dx=>{box(.5,4.2,.5,0xe9e2cf,gx+dx,2.1,gz);collide(gx+dx-.4,gx+dx+.4,gz-.4,gz+.4)});box(7.4,.5,.6,0x2f6e33,gx,4.4,gz);
+ const gl2=label('PLAZA MAKET KOTA · nuansa Kebun Raya Bogor (1817)',{size:40,w:.5,bg:'rgba(47,110,51,.92)',color:'#f4f8f4'});gl2.position.set(gx,5.2,gz);scene.add(gl2);}
+
+/* hujan */
+const RAIN=2600;const rg=new THREE.BufferGeometry();const rp=new Float32Array(RAIN*3);
+for(let i=0;i<RAIN;i++){rp[i*3]=(Math.random()-.5)*60;rp[i*3+1]=Math.random()*25;rp[i*3+2]=(Math.random()-.5)*60}
+rg.setAttribute('position',new THREE.BufferAttribute(rp,3));
+const rain=new THREE.Points(rg,new THREE.PointsMaterial({color:0x9fc7d6,size:.08,transparent:true,opacity:.55,depthWrite:false}));rain.visible=false;scene.add(rain);
+
+/* ---------- avatar ---------- */
+const avatar=new THREE.Group();scene.add(avatar);
+{const m=new THREE.MeshStandardMaterial({color:0xf2b544,roughness:.5});const m2=new THREE.MeshStandardMaterial({color:0x13242b,roughness:.4});
+ const b=new THREE.Mesh(new THREE.CapsuleGeometry(.32,.75,6,14),m);b.position.y=.85;b.castShadow=true;avatar.add(b);
+ const h=new THREE.Mesh(new THREE.SphereGeometry(.28,20,14),m);h.position.y=1.65;h.castShadow=true;avatar.add(h);
+ const v=new THREE.Mesh(new THREE.BoxGeometry(.36,.12,.1),m2);v.position.set(0,1.68,.25);avatar.add(v);
+ const helm=new THREE.Mesh(new THREE.SphereGeometry(.3,20,10,0,Math.PI*2,0,Math.PI/2),new THREE.MeshStandardMaterial({color:0xe9f1ef}));helm.position.y=1.7;avatar.add(helm);}
+let nameTag=null;
+const P={pos:new THREE.Vector3(0,0,21),yaw:Math.PI,camYaw:Math.PI,camPitch:.35,dist:8,target:null};
+
+/* ---------- data geospasial ---------- */
+let DATA=null;const kelMeshes=[];let hz='multi',mode='risk';
+const hzBox=$('#hzChips');
+HZ.forEach(h=>{const b=document.createElement('button');b.className='chip'+(h.k===hz?' on':'');b.textContent=h.n;b.dataset.hz=h.k;b.onclick=()=>setHz(h.k);hzBox.appendChild(b)});
+document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{mode=b.dataset.mode;document.querySelectorAll('[data-mode]').forEach(x=>x.classList.toggle('on',x===b));recolor()});
+
+function shapeFrom(ring){const s=new THREE.Shape();ring.forEach(([x,y],i)=>{const X=x*MS,Y=y*MS;i?s.lineTo(X,Y):s.moveTo(X,Y)});return s}
+async function loadData(){
+  try{await document.fonts.ready}catch(e){}
+  const r=await fetch('krb_data.json');DATA=await r.json();
+  const maxPend=Math.max(...DATA.kel.flatMap(k=>Object.values(k.d).map(v=>v.pend||0)));DATA.maxPend=maxPend;
+  DATA.kel.forEach(k=>{
+    const shapes=k.g.map(shapeFrom);
+    const geo=new THREE.ExtrudeGeometry(shapes,{depth:1,bevelEnabled:false});
+    geo.rotateX(-Math.PI/2); // y-utara -> -z
+    const mat=new THREE.MeshStandardMaterial({color:COL.none,roughness:.6,metalness:.05});
+    const mesh=new THREE.Mesh(geo,mat);mesh.castShadow=mesh.receiveShadow=true;
+    mesh.userData={kel:k,act:()=>openInfo(k),h:.3,th:.3};mapGroup.add(mesh);kelMeshes.push(mesh);clickables.push(mesh);
+    const edges=new THREE.LineSegments(new THREE.EdgesGeometry(geo,30),new THREE.LineBasicMaterial({color:0x0b161b,transparent:true,opacity:.45}));mesh.add(edges);
+  });
+  // batas kecamatan & label
+  DATA.kec.forEach(kc=>{kc.g.forEach(ring=>{const pts=ring.map(([x,y])=>new THREE.Vector3(x*MS,0,-y*MS));pts.push(pts[0]);
+      const l=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineBasicMaterial({color:0xf2b544,transparent:true,opacity:.55}));l.position.y=3.75;mapGroup.add(l);l.userData.kecLine=true});
+    let cx=0,cy=0,n=0;kc.g[0].forEach(([x,y])=>{cx+=x;cy+=y;n++});
+    const lb=label(kc.n.toUpperCase(),{size:40,w:.6,bg:'rgba(11,22,27,.7)'});lb.position.set(cx/n*MS,4.2,-cy/n*MS);mapGroup.add(lb)});
+  // situ
+  const nl=label('U',{size:44,w:.6,bg:'rgba(242,181,68,.95)',color:'#1e1505'});nl.position.set(0,1.2,-13.2);mapGroup.add(nl);
+  const sc=label('Skala maket 1 : 800  ·  1 m maket = 800 m  ·  garis oranye = batas kecamatan',{size:34,w:.42,bg:'rgba(11,22,27,.75)'});sc.position.set(0,.9,14.6);mapGroup.add(sc);
+  recolor();
+}
+function lerpC(a,b,t){return new THREE.Color(a).lerp(new THREE.Color(b),t)}
+function recolor(){
+  if(!DATA)return;
+  const name=HZ.find(h=>h.k===hz).n;
+  kelMeshes.forEach(m=>{const v=m.userData.kel.d[hz];let c,h;
+    if(mode==='risk'){ if(!v){c=new THREE.Color(COL.none);h=.15}else{c=new THREE.Color(COL[v.risk]||COL.none);h={Rendah:.6,Sedang:1.5,Tinggi:3.2}[v.risk]||.3} }
+    else if(mode==='ikm'){ const ikm=(m.userData.kel.d[hz]||m.userData.kel.d.multi||{}).ikm||0;c=ikm<.4?lerpC(0xd9452f,0xe8c22e,ikm/.4):lerpC(0xe8c22e,0x3fae5a,Math.min(1,(ikm-.4)/.4));h=.3+ikm*3 }
+    else { const p=v?v.pend:0;c=lerpC(0x24434c,0x7fd3ff,Math.sqrt(p/DATA.maxPend));h=.15+3.4*Math.sqrt(p/DATA.maxPend) }
+    m.material.color.copy(c);m.userData.th=h});
+  hzTitle.material.map.dispose();const nt=label({risk:'Risiko: ',ikm:'Kesiapsiagaan: ',pend:'Penduduk terpapar: '}[mode]+name,{size:56,w:1.6});
+  hzTitle.material=nt.material;hzTitle.scale.copy(nt.scale);
+  legend();
+}
+function legend(){const L=$('#legend');
+  if(mode==='risk')L.innerHTML=`<span><i class="sw" style="background:var(--low)"></i>Rendah</span><span><i class="sw" style="background:var(--mid)"></i>Sedang</span><span><i class="sw" style="background:var(--high)"></i>Tinggi</span><span><i class="sw" style="background:var(--none)"></i>Tidak terdampak</span><span>Tinggi blok = tingkat risiko</span>`;
+  else if(mode==='ikm')L.innerHTML=`<span><i class="sw" style="background:var(--high)"></i>IKM 0</span><span><i class="sw" style="background:var(--mid)"></i>0,4</span><span><i class="sw" style="background:var(--low)"></i>0,8</span><span>Tinggi blok = IKM (Matriks Kelurahan)</span>`;
+  else L.innerHTML=`<span><i class="sw" style="background:#24434c"></i>Sedikit</span><span><i class="sw" style="background:#7fd3ff"></i>Banyak</span><span>Tinggi blok = penduduk terpapar (maks ${fmt(DATA.maxPend)} jiwa)</span>`}
+function setHz(k){hz=k;document.querySelectorAll('#hzChips .chip').forEach(c=>c.classList.toggle('on',c.dataset.hz===k));recolor()}
+
+/* ---------- panel info ---------- */
+const seen=new Set(store.get('kel',[]));
+function openInfo(k){
+  seen.add(k.n);store.set('kel',[...seen]);checkGoals();
+  $('#iKec').textContent='Kec. '+k.k+' · '+fmt(k.ha)+' ha';$('#iName').textContent='Kelurahan '+k.n;
+  const v=k.d[hz];const hn=HZ.find(h=>h.k===hz).n;
+  let html='';
+  if(v){html+=`<div class="row" style="align-items:center;gap:10px"><span class="muted">${hn}</span><span class="pill ${v.risk}">Risiko ${v.risk}</span></div>
+   <div class="stats"><div class="stat"><small>Tingkat bahaya</small><b>${v.haz}</b></div><div class="stat"><small>Tingkat kerentanan</small><b>${v.vul}</b></div>
+   <div class="stat"><small>Penduduk terpapar</small><b>${fmt(v.pend)} jiwa</b></div><div class="stat"><small>Potensi kerugian</small><b>Rp ${(v.rugi/1000).toLocaleString('id-ID',{maximumFractionDigits:1})} miliar</b></div>
+   <div class="stat"><small>Luas bahaya</small><b>${v.luasBahaya.toLocaleString('id-ID')} ha</b></div><div class="stat"><small>Indeks kesiapsiagaan (IKM)</small><b>${v.ikm.toLocaleString('id-ID',{maximumFractionDigits:2})}</b></div></div>`}
+  else html+=`<p class="muted" style="margin:0">Kelurahan ini tidak masuk wilayah terdampak ${hn.toLowerCase()} dalam KRB.</p>`;
+  html+='<div><div class="eyebrow" style="margin-bottom:6px">Semua jenis bahaya</div><table class="hz">'+HZ.map(h=>{const x=k.d[h.k];return `<tr><td>${h.n}</td><td>${x?`<span class="pill ${x.risk}">${x.risk}</span>`:'<span class="pill none">—</span>'}</td></tr>`}).join('')+'</table></div>';
+  html+='<p class="muted" style="margin:0;font-size:12px">Sumber: Matriks Kelurahan KRB Kota Bogor 2023–2027. IKD bernilai 0,62 untuk semua kelurahan.</p>';
+  $('#iBody').innerHTML=html;openM('info');
+}
+
+/* ---------- viewer ---------- */
+const viewed=new Set(store.get('maps',[]));let vList=MAPS,vIdx=0;
+function openViewer(item){vList=MAPS.includes(item)?MAPS:EXTRA;vIdx=vList.indexOf(item);showV();openM('viewer')}
+function showV(){const it=vList[vIdx];$('#vImg').src=it.img;$('#vImg').alt=it.t;$('#vTitle').textContent=it.t;
+  $('#vEy').textContent=MAPS.includes(it)?`Galeri kerentanan · ${vIdx+1}/${MAPS.length}`:'Paviliun data';
+  $('#vCap').textContent=it.cap||'Peta resmi KRB Kota Bogor 2023–2027 (Folder KRB › Data Spasial › Kerentanan). Versi ini diperkecil untuk web; buka versi asli untuk resolusi penuh.';
+  const a=$('#vLink');if(it.id){a.hidden=false;a.href=DRV+it.id+'/view'}else a.hidden=true;
+  $('#vWrap').classList.remove('zoom');if(MAPS.includes(it)){viewed.add(it.t);store.set('maps',[...viewed]);checkGoals()}}
+$('#vPrev').onclick=()=>{vIdx=(vIdx-1+vList.length)%vList.length;showV()};
+$('#vNext').onclick=()=>{vIdx=(vIdx+1)%vList.length;showV()};
+$('#vWrap').onclick=()=>$('#vWrap').classList.toggle('zoom');
+
+/* ---------- kios ---------- */
+function openKiosk(key){const K=KIOSK[key];$('#kTitle').textContent=K.t;
+  $('#kBody').innerHTML=`<p style="margin:0;line-height:1.55">${K.d}</p><div class="eyebrow">Peta layout resolusi penuh (JPG ±25 MB, butuh akses Drive KRB)</div>
+  <div class="list">${K.items.map(([n,id])=>`<a href="${DRV+id}/view" target="_blank" rel="noopener"><span>${K.t} ${n}</span><span>↗</span></a>`).join('')}</div>
+  <a class="link" href="${FLD+K.f}" target="_blank" rel="noopener">Buka folder ${K.t} di Drive ↗</a>`;openM('kiosk');visitZone('Paviliun')}
+
+/* ---------- robot Geo ---------- */
+let chatted=store.get('chat',false),quiz=null,quizScore=store.get('quiz',0);
+const SUG=['Risiko tinggi apa saja?','Profil kelurahan Gudang','Tren kejadian longsor','Apa itu IKM dan IKD?','Mulai kuis'];
+function say(t,who='bot'){const d=document.createElement('div');d.className='msg '+who;d.textContent=t;$('#log').appendChild(d);$('#log').scrollTop=1e9}
+function sugg(list){$('#sugg').innerHTML='';list.forEach(s=>{const b=document.createElement('button');b.type='button';b.textContent=s;b.onclick=()=>ask(s);$('#sugg').appendChild(b)})}
+function openChat(){openM('chat');if(!$('#log').children.length){say(`Halo${myName?', '+myName:''}! Saya Geo. Saya hafal Matriks Kelurahan KRB Kota Bogor: 68 kelurahan, 8 jenis bahaya. Tanyakan nama kelurahan, jenis bahaya, atau ketik "kuis".`);sugg(SUG)}setTimeout(()=>$('#askIn').focus(),50)}
+$('#askF').onsubmit=e=>{e.preventDefault();const v=$('#askIn').value.trim();if(v)ask(v);$('#askIn').value=''};
+const norm=s=>s.toLowerCase().replace(/[^a-z]/g,'');
+function hzFrom(q){const m={banjirbandang:'bandang',bandang:'bandang',longsor:'longsor',banjir:'banjir',cuaca:'cuaca',angin:'cuaca',gempa:'gempa',gunung:'gunungapi',letusan:'gunungapi',teknologi:'galtek',galtek:'galtek',pipa:'galtek',kering:'kekeringan',multi:'multi'};for(const k in m)if(q.includes(k))return m[k];return null}
+function countRisk(h){const c={Rendah:0,Sedang:0,Tinggi:0};DATA.kel.forEach(k=>{const v=k.d[h];if(v&&c[v.risk]!=null)c[v.risk]++});return c}
+function answer(qRaw){
+  if(!DATA)return 'Data maket masih dimuat. Coba lagi sebentar.';
+  const q=norm(qRaw);
+  if(quiz){return quizAnswer(qRaw)}
+  if(q.includes('kuis')){return startQuiz()}
+  const kel=[...DATA.kel].sort((a,b)=>b.n.length-a.n.length).find(k=>q.includes(norm(k.n))&&norm(k.n).length>3);
+  if(kel){openInfoSoon(kel);const hi=HZ.filter(h=>kel.d[h.k]?.risk==='Tinggi').map(h=>h.n.toLowerCase());const m=kel.d.multi;
+    return `Kelurahan ${kel.n} (Kec. ${kel.k}, ${fmt(kel.ha)} ha).\nRisiko tinggi: ${hi.length?hi.join(', '):'tidak ada'}.\nIKM: ${m?m.ikm.toLocaleString('id-ID',{maximumFractionDigits:2}):'-'}; penduduk terpapar multi bahaya: ${m?fmt(m.pend):'-'} jiwa.\nSaya sorot kelurahannya di maket.`}
+  const kec=DATA.kec.find(k=>q.includes(norm(k.n)));
+  if(kec){const ks=DATA.kel.filter(k=>k.k===kec.n);let n=0;const top={};ks.forEach(k=>HZ.slice(1).forEach(h=>{if(k.d[h.k]?.risk==='Tinggi'){n++;top[k.n]=(top[k.n]||0)+1}}));
+    const t=Object.entries(top).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([a,b])=>`${a} (${b})`).join(', ');
+    return `Kecamatan ${kec.n}: ${ks.length} kelurahan, ${n} kombinasi kelurahan–bahaya berisiko tinggi.${t?'\nTerbanyak: '+t+'.':''}`}
+  const h=hzFrom(q);
+  if(h&&(q.includes('tren')||q.includes('kejadian'))&&TREN[h])return `Kejadian ${HZ.find(x=>x.k===h).n.toLowerCase()} tercatat BPBD 2018–2022: ${TREN[h].join(', ')}. Tahun 2019 rendah di semua jenis, kemungkinan karena celah pencatatan.`;
+  if(q.includes('tren')||q.includes('kejadian'))return 'Kejadian tercatat BPBD 2018–2022: longsor 182→373, cuaca ekstrem 149→223, banjir 52→32. Grafiknya ada di dinding belakang galeri.';
+  if(h){setHz(h);const c=countRisk(h);const ks=DATA.kel.filter(k=>k.d[h]).sort((a,b)=>b.d[h].pend-a.d[h].pend).slice(0,3).map(k=>k.n).join(', ');
+    return `${HZ.find(x=>x.k===h).n}: ${DATA.kel.filter(k=>k.d[h]).length} kelurahan terdampak. Risiko tinggi ${c.Tinggi}, sedang ${c.Sedang}, rendah ${c.Rendah}.\nPenduduk terpapar terbanyak: ${ks}.\nMaket sudah saya ubah ke bahaya ini.`}
+  if(q.includes('tinggi')){return 'Jumlah kelurahan berisiko tinggi per bahaya:\n'+HZ.slice(1).map(h=>`• ${h.n}: ${countRisk(h.k).Tinggi}`).join('\n')+'\nKecamatan Tanah Sareal paling banyak (16 kombinasi).'}
+  if(q.includes('ikd')||q.includes('ikm')||q.includes('kapasitas')||q.includes('siaga'))return 'Kapasitas = 0,6 × IKM + 0,4 × IKD.\nIKM (Indeks Kesiapsiagaan Masyarakat) diukur per kelurahan, dari 0,07 (Cipaku) sampai 0,79 (Kebon Kalapa).\nIKD (Indeks Ketahanan Daerah) bernilai 0,62 untuk seluruh kota.';
+  if(q.includes('kerentanan'))return 'Kerentanan adalah kondisi masyarakat yang membuatnya tidak mampu menghadapi ancaman. KRB menghitungnya dari komponen sosial, fisik, ekonomi, dan lingkungan. Delapan petanya ada di galeri timur.';
+  if(q.includes('risiko'))return 'Risiko adalah potensi kerugian akibat bencana, dihitung dari tingkat kerugian (bahaya × kerentanan) dibandingkan kapasitas. Pilih jenis bahaya di bawah layar untuk melihat petanya di maket.';
+  if(q.includes('bahaya'))return 'KRB Kota Bogor mengkaji 8 bahaya: banjir, banjir bandang, cuaca ekstrem, tanah longsor, gempa bumi, letusan gunung api, kegagalan teknologi, dan kekeringan.';
+  if(q.includes('sumber')||q.includes('data'))return 'Data berasal dari Folder KRB Kota Bogor: Matriks Kelurahan (atribut risiko), shapefile batas kelurahan dan situ (Data Dasar), peta kerentanan PNG, dan Album Peta 2023–2027 (Bapperida Kota Bogor & FT Universitas Pakuan).';
+  if(q.includes('halo')||q.includes('hai'))return 'Halo! Coba tanyakan "profil kelurahan Sempur" atau "risiko banjir".';
+  return 'Saya belum paham. Coba sebut nama kelurahan (misal "Cibuluh"), kecamatan, jenis bahaya ("longsor"), "tren kejadian", atau "kuis".';
+}
+function openInfoSoon(k){const m=kelMeshes.find(x=>x.userData.kel===k);if(m){highlight(m);setTimeout(()=>{},0)}}
+const QZ=[
+ {q:'Bahaya apa yang paling banyak kelurahan berisiko tingginya?',o:['Banjir','Cuaca ekstrem','Gempa bumi'],a:1,e:'Cuaca ekstrem: 27 kelurahan berisiko tinggi.'},
+ {q:'Kecamatan mana yang paling banyak kombinasi kelurahan–bahaya berisiko tinggi?',o:['Bogor Selatan','Tanah Sareal','Bogor Utara'],a:1,e:'Tanah Sareal, dengan 16 kombinasi.'},
+ {q:'Berapa nilai Indeks Ketahanan Daerah (IKD) Kota Bogor?',o:['0,62','0,40','0,79'],a:0,e:'IKD 0,62, sama untuk semua kelurahan.'}];
+function startQuiz(){quiz={i:0,s:0};return askQ()}
+function askQ(){const z=QZ[quiz.i];sugg(z.o);return `Kuis ${quiz.i+1}/3: ${z.q}\n`+z.o.map((o,i)=>`${'ABC'[i]}. ${o}`).join('\n')}
+function quizAnswer(a){const z=QZ[quiz.i];const n=norm(a);let pick=z.o.findIndex(o=>norm(o)===n);if(pick<0)pick='abc'.indexOf(n);
+  const ok=pick===z.a;if(ok)quiz.s++;let out=(ok?'Benar! ':'Belum tepat. ')+z.e;quiz.i++;
+  if(quiz.i<QZ.length)return out+'\n\n'+askQ();
+  quizScore=Math.max(quizScore,quiz.s);store.set('quiz',quizScore);const s=quiz.s;quiz=null;sugg(SUG);checkGoals();return out+`\n\nSkor Anda ${s}/3.`+(s===3?' Hebat, lencana Siaga Bencana terbuka!':' Coba lagi dengan mengetik "kuis".')}
+function ask(t){say(t,'me');const r=answer(t);setTimeout(()=>say(r),220);if(!chatted){chatted=true;store.set('chat',true);checkGoals()}}
+
+/* ---------- capaian ---------- */
+const zones=new Set(store.get('zones',[]));
+function visitZone(z){if(!zones.has(z)){zones.add(z);store.set('zones',[...zones]);checkGoals()}}
+function goals(){return[
+ {n:'Penjelajah',d:'Kunjungi plaza, galeri, dan paviliun',v:Math.min(zones.size,3),m:3},
+ {n:'Kurator peta',d:'Buka 8 peta kerentanan di galeri',v:viewed.size,m:8},
+ {n:'Analis kelurahan',d:'Periksa 10 kelurahan di maket',v:Math.min(seen.size,10),m:10},
+ {n:'Teman Geo',d:'Bertanya kepada robot Geo',v:chatted?1:0,m:1},
+ {n:'Siaga bencana',d:'Jawab kuis Geo 3/3 benar',v:quizScore,m:3}]}
+let doneN=0;
+function checkGoals(){const g=goals();const n=g.filter(x=>x.v>=x.m).length;$('#goalN').textContent=n+'/'+g.length;if(n>doneN&&doneN!==-1&&started)toast('Capaian baru terbuka!');doneN=n}
+$('#bGoal').onclick=()=>{const g=goals();$('#goalBody').innerHTML=g.map(x=>`<div class="badge ${x.v>=x.m?'ok':''}"><div class="ic">${x.v>=x.m?'✓':x.n[0]}</div><div style="flex:1;min-width:0"><b>${x.n}</b><div class="muted" style="font-size:12px">${x.d}</div><div class="bar" style="margin-top:6px"><i style="width:${x.v/x.m*100}%"></i></div></div><span class="muted" style="font-variant-numeric:tabular-nums">${x.v}/${x.m}</span></div>`).join('')+'<p class="muted" style="margin:0;font-size:12px">Capaian tersimpan di peramban ini saja.</p>';openM('goalM')};
+
+/* ---------- peta lokasi ---------- */
+const TP=[['Plaza maket kota',0,19,0],['Robot Geo',0,-16.6,0],['Galeri peta kerentanan',30,0,-Math.PI/2],['Paviliun data KRB',-22,0,Math.PI/2],['Grafik tren kejadian',39,2,-Math.PI/2]];
+const mm=$('#mm'),mx=mm.getContext('2d');const MMS=600/110; // 110 m lebar
+const w2m=(x,z)=>[300+x*MMS,300+z*MMS];
+function drawMM(){mx.clearRect(0,0,600,600);mx.fillStyle='#24452a';mx.fillRect(0,0,600,600);
+  mx.fillStyle='#3d6b3a';mx.beginPath();mx.arc(300,300,90*MMS*0.6,0,7);mx.fill();
+  mx.fillStyle='#bfb6a2';mx.beginPath();mx.arc(...w2m(0,0),22*MMS,0,7);mx.fill();mx.fillStyle='#8d8573';mx.beginPath();mx.arc(...w2m(0,0),15*MMS,0,7);mx.fill();
+  mx.fillStyle='#3d8ea3';mx.beginPath();mx.arc(...w2m(POND.x,POND.z),POND.r*MMS,0,7);mx.fill();
+  if(DATA){DATA.kec.forEach(k=>k.g.forEach(r=>{mx.beginPath();r.forEach(([x,y],i)=>{const[a,b]=w2m(x*MS,-y*MS);i?mx.lineTo(a,b):mx.moveTo(a,b)});mx.closePath();mx.strokeStyle='#e9f1ef';mx.lineWidth=1;mx.stroke()}))}
+  if(DATA){mx.fillStyle='#2f8fd0';DATA.situ.forEach(r=>{mx.beginPath();r.forEach(([x,y],i)=>{const[a,b]=w2m(x*MS,-y*MS);i?mx.lineTo(a,b):mx.moveTo(a,b)});mx.fill()})}
+  mx.fillStyle='#d9d4c7';const g0=w2m(G.x0,G.z0),g1=w2m(G.x1,G.z1);mx.globalAlpha=.25;mx.fillRect(g0[0],g0[1],g1[0]-g0[0],g1[1]-g0[1]);
+  const p0=w2m(-38,-13),p1=w2m(-20,13);mx.fillRect(p0[0],p0[1],p1[0]-p0[0],p1[1]-p0[1]);mx.globalAlpha=1;
+  mx.font='600 15px Chakra Petch, sans-serif';mx.fillStyle='#9bb3b0';mx.textAlign='center';
+  mx.fillText('GALERI',...w2m(32,-15.5));mx.fillText('PAVILIUN',...w2m(-29,-14.5));mx.fillText('MAKET',...w2m(0,-15.5));
+  TP.forEach(([n,x,z])=>{const[a,b]=w2m(x,z);mx.fillStyle='#f2b544';mx.beginPath();mx.arc(a,b,6,0,7);mx.fill()});
+  const[a,b]=w2m(P.pos.x,P.pos.z);mx.fillStyle='#fff';mx.beginPath();mx.arc(a,b,8,0,7);mx.fill();
+  mx.strokeStyle='#fff';mx.lineWidth=3;mx.beginPath();mx.moveTo(a,b);mx.lineTo(a+Math.sin(P.yaw)*16,b+Math.cos(P.yaw)*16);mx.stroke();
+  mx.fillStyle='#e9f1ef';mx.textAlign='left';mx.fillText('U ↑',14,24)}
+function teleport(x,z,dir){P.pos.set(x,0,z);P.target=null;if(dir!=null){P.camYaw=dir;P.yaw=dir+Math.PI}}
+$('#bMap').onclick=()=>{drawMM();$('#tpList').innerHTML='';TP.forEach(([n,x,z,y])=>{const b=document.createElement('button');b.innerHTML=`<span>${n}</span><span>Pindah ↗</span>`;b.onclick=()=>{teleport(x,z,y);closeM();toast('Berpindah ke '+n)};$('#tpList').appendChild(b)});openM('mapM')};
+mm.onclick=e=>{const r=mm.getBoundingClientRect();const x=((e.clientX-r.left)/r.width*600-300)/MMS,z=((e.clientY-r.top)/r.height*600-300)/MMS;
+  if(canStand(x,z)){teleport(x,z);closeM();toast('Berpindah')}else toast('Titik itu tidak bisa dipijak')};
+$('#bRobot').onclick=openChat;
+$('#bHelp').onclick=()=>openM('helpM');
+$('#bRain').onclick=e=>{rain.visible=!rain.visible;scene.fog.color.setHex(rain.visible?0x9fb3b4:0xc9e1da);sun.intensity=rain.visible?1.1:2.4;e.currentTarget.classList.toggle('on',rain.visible);if(rain.visible)toast('Bogor, kota hujan: 3.500–4.000 mm per tahun')};
+
+/* ---------- input ---------- */
+const keys=new Set();
+addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;
+  if(e.key==='Escape'){closeM();return}
+  if(uiOpen)return;const k=e.key.toLowerCase();keys.add(k);
+  if(k==='e'&&near)near.act();if(k==='m')$('#bMap').click();});
+addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));
+let drag=null;const el=renderer.domElement;
+el.addEventListener('pointerdown',e=>{if(e.pointerType==='touch'&&e.clientX<innerWidth*0.4&&e.clientY>innerHeight*0.45&&!$('#joy').hidden)return;drag={x:e.clientX,y:e.clientY,sx:e.clientX,sy:e.clientY,id:e.pointerId};el.setPointerCapture(e.pointerId)});
+el.addEventListener('pointermove',e=>{if(drag&&drag.id===e.pointerId){P.camYaw-=(e.clientX-drag.x)*.006;P.camPitch=THREE.MathUtils.clamp(P.camPitch+(e.clientY-drag.y)*.004,.05,1.2);drag.x=e.clientX;drag.y=e.clientY}else hover(e)});
+el.addEventListener('pointerup',e=>{if(!drag)return;const moved=Math.hypot(e.clientX-drag.sx,e.clientY-drag.sy);drag=null;if(moved<6)click(e)});
+el.addEventListener('wheel',e=>{P.dist=THREE.MathUtils.clamp(P.dist+e.deltaY*.01,3,22)},{passive:true});
+const ray=new THREE.Raycaster(),ndc=new THREE.Vector2();
+function pick(e,objs){ndc.set(e.clientX/innerWidth*2-1,-(e.clientY/innerHeight)*2+1);ray.setFromCamera(ndc,camera);return ray.intersectObjects(objs,false)[0]}
+function click(e){if(uiOpen||!started)return;const h=pick(e,[...clickables,ground]);if(!h)return;
+  if(h.object===ground){if(canStand(h.point.x,h.point.z))P.target=h.point.clone().setY(0)}
+  else if(h.object.userData.act){if(h.object.userData.kel)highlight(h.object);h.object.userData.act()}}
+let hovered=null;
+function hover(e){if(uiOpen||!started||e.pointerType==='touch')return;const h=pick(e,kelMeshes);const tip=$('#tip');
+  if(h){const k=h.object.userData.kel;const v=k.d[hz];tip.hidden=false;tip.textContent=`${k.n} · ${v?'risiko '+v.risk.toLowerCase():'tidak terdampak'}`;tip.style.left=(e.clientX+14)+'px';tip.style.top=(e.clientY+10)+'px';
+    if(hovered!==h.object){if(hovered&&hovered!==selected)hovered.material.emissive.setHex(0);hovered=h.object;if(hovered!==selected)hovered.material.emissive.setHex(0x222222)}el.style.cursor='pointer'}
+  else{tip.hidden=true;if(hovered&&hovered!==selected)hovered.material.emissive.setHex(0);hovered=null;const c=pick(e,clickables);el.style.cursor=c?'pointer':'default'}}
+let selected=null;
+function highlight(m){if(selected)selected.material.emissive.setHex(0);selected=m;m.material.emissive.setHex(0x553300)}
+/* joystick sentuh */
+const joy=$('#joy'),knob=joy.querySelector('i');let jv={x:0,y:0},jid=null;
+if(matchMedia('(pointer:coarse)').matches)joy.hidden=false;
+joy.addEventListener('pointerdown',e=>{jid=e.pointerId;joy.setPointerCapture(jid);jmove(e)});
+joy.addEventListener('pointermove',e=>{if(e.pointerId===jid)jmove(e)});
+joy.addEventListener('pointerup',()=>{jid=null;jv={x:0,y:0};knob.style.transform=''});
+function jmove(e){const r=joy.getBoundingClientRect();let x=(e.clientX-r.left-r.width/2)/(r.width/2),y=(e.clientY-r.top-r.height/2)/(r.height/2);const l=Math.hypot(x,y);if(l>1){x/=l;y/=l}jv={x,y};knob.style.transform=`translate(${x*32}px,${y*32}px)`}
+$('#prompt').onclick=()=>near&&near.act();
+
+/* ---------- gerak & tabrakan ---------- */
+function blocked(x,z){const r=.4;return colliders.some(c=>x>c.x0-r&&x<c.x1+r&&z>c.z0-r&&z<c.z1+r)||Math.hypot(x,z)>85}
+function inMapDais(x,z){return Math.hypot(x,z)<15.6}
+// dais berbentuk lingkaran: ganti AABB persegi dengan uji radius
+colliders.shift();
+const _blocked=blocked;
+function canStand(x,z){return !_blocked(x,z)&&!inMapDais(x,z)&&Math.hypot(x-POND.x,z-POND.z)>POND.r+.3}
+let near=null,started=false,myName='';
+function zoneOf(p){if(p.x>G.x0&&p.x<G.x1&&p.z>G.z0&&p.z<G.z1)return'Galeri';if(p.x<-20&&p.x>-38&&Math.abs(p.z)<13)return'Paviliun';return'Plaza'}
+const clock=new THREE.Clock();const tmp=new THREE.Vector3();
+function update(dt){
+  const run=keys.has('shift')?2:1;let f=0,s=0;
+  if(keys.has('w')||keys.has('arrowup'))f+=1;if(keys.has('s')||keys.has('arrowdown'))f-=1;
+  if(keys.has('a')||keys.has('arrowleft'))s-=1;if(keys.has('d')||keys.has('arrowright'))s+=1;
+  if(jv.x||jv.y){f=-jv.y;s=jv.x}
+  let mvx=0,mvz=0;
+  if(f||s){P.target=null;const fx=-Math.sin(P.camYaw),fz=-Math.cos(P.camYaw);const rx=-fz,rz=fx;mvx=fx*f+rx*s;mvz=fz*f+rz*s}
+  else if(P.target){tmp.subVectors(P.target,P.pos);tmp.y=0;const d=tmp.length();if(d<.15)P.target=null;else{mvx=tmp.x/d;mvz=tmp.z/d}}
+  const l=Math.hypot(mvx,mvz);
+  if(l>0){mvx/=l;mvz/=l;const sp=4.2*run*dt;const nx=P.pos.x+mvx*sp,nz=P.pos.z+mvz*sp;
+    if(canStand(nx,nz)){P.pos.x=nx;P.pos.z=nz}else if(canStand(nx,P.pos.z))P.pos.x=nx;else if(canStand(P.pos.x,nz))P.pos.z=nz;else P.target=null;
+    const ty=Math.atan2(mvx,mvz);let dy=ty-P.yaw;dy=Math.atan2(Math.sin(dy),Math.cos(dy));P.yaw+=dy*Math.min(1,dt*10)}
+  avatar.position.copy(P.pos);avatar.rotation.y=P.yaw;avatar.position.y=l>0?Math.abs(Math.sin(clock.elapsedTime*10))*.06:0;
+  // kamera orbit
+  if(!renderer.xr.isPresenting){const cd=P.dist;tmp.set(Math.sin(P.camYaw)*Math.cos(P.camPitch)*cd,1.6+Math.sin(P.camPitch)*cd,Math.cos(P.camYaw)*Math.cos(P.camPitch)*cd).add(P.pos);
+    rig.position.set(0,0,0);camera.position.lerp(tmp,Math.min(1,dt*8));camera.lookAt(P.pos.x,P.pos.y+1.4,P.pos.z)}
+  // maket animasi tinggi
+  kelMeshes.forEach(m=>{const u=m.userData;u.h+=(u.th-u.h)*Math.min(1,dt*6);m.scale.y=Math.max(.05,u.h);m.position.y=(m===selected?.25:0)});
+  // robot
+  robot.rotation.y=Math.atan2(P.pos.x-robot.position.x,P.pos.z-robot.position.z)*.6;robot.position.y=Math.sin(clock.elapsedTime*2)*.08;
+  robot.userData.bulb.material.emissiveIntensity=1.5+Math.sin(clock.elapsedTime*4);
+  // alam bergerak
+  const T=clock.elapsedTime;
+  NATURE.sway.forEach(s=>{s.o.rotation.z=Math.sin(T*1.1+s.p)*s.a;s.o.rotation.x=Math.cos(T*.8+s.p)*s.a*.6});
+  NATURE.flies.forEach(f=>{f.a+=dt*f.s;const r=f.r+Math.sin(T*.7+f.p)*2;f.g.position.set(Math.cos(f.a)*r,f.h+Math.sin(T*2+f.p)*.4,Math.sin(f.a)*r);f.g.rotation.y=-f.a;const w=Math.sin(T*18+f.p)*1.1;f.L.rotation.y=w;f.R.rotation.y=-w});
+  NATURE.clouds.forEach(c=>{c.g.position.x+=c.v*dt;if(c.g.position.x>170)c.g.position.x=-170});
+  if(NATURE.water)NATURE.water.material.color.setHSL(.53,.45,.42+Math.sin(T*1.5)*.03);
+  // hujan
+  if(rain.visible){const a=rg.attributes.position.array;for(let i=0;i<RAIN;i++){a[i*3+1]-=18*dt;if(a[i*3+1]<0){a[i*3+1]=25;a[i*3]=P.pos.x+(Math.random()-.5)*60;a[i*3+2]=P.pos.z+(Math.random()-.5)*60}}rg.attributes.position.needsUpdate=true}
+  // interaksi terdekat
+  let best=null,bd=1e9;interact.forEach(it=>{const d=Math.hypot(it.pos.x-P.pos.x,it.pos.z-P.pos.z);if(d<it.r&&d<bd){bd=d;best=it}});
+  if(best!==near){near=best;const pr=$('#prompt');if(near&&started&&!uiOpen){pr.hidden=false;pr.textContent=(matchMedia('(pointer:coarse)').matches?'Ketuk: ':'Tekan E: ')+near.label}else pr.hidden=true}
+  if(uiOpen)$('#prompt').hidden=true;else if(near&&started)$('#prompt').hidden=false;
+  const z=zoneOf(P.pos);if($('#loc').textContent!==z){$('#loc').textContent=z;if(started)visitZone(z)}
+  if(nameTag)nameTag.position.set(P.pos.x,P.pos.y+2.35,P.pos.z);
+}
+
+/* ---------- VR ---------- */
+const vrBtn=VRButton.createButton(renderer);vrBtn.style.cssText='';vrBtn.className='hbtn';$('#vrSlot').appendChild(vrBtn);
+const vrObserver=new MutationObserver(()=>{if(/NOT SUPPORTED|NOT ALLOWED/i.test(vrBtn.textContent))vrBtn.textContent='VR tidak didukung';else if(/ENTER VR/i.test(vrBtn.textContent))vrBtn.textContent='Masuk VR';else if(/EXIT VR/i.test(vrBtn.textContent))vrBtn.textContent='Keluar VR'});
+vrObserver.observe(vrBtn,{childList:true,characterData:true,subtree:true});
+renderer.xr.addEventListener('sessionstart',()=>{rig.position.set(P.pos.x,0,P.pos.z);camera.position.set(0,0,0);avatar.visible=false});
+renderer.xr.addEventListener('sessionend',()=>{avatar.visible=true;rig.position.set(0,0,0)});
+const ctrls=[0,1].map(i=>{const c=renderer.xr.getController(i);rig.add(c);
+  const line=new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(),new THREE.Vector3(0,0,-1)]),new THREE.LineBasicMaterial({color:0xf2b544}));line.scale.z=10;c.add(line);
+  c.addEventListener('select',()=>{const m=new THREE.Matrix4().extractRotation(c.matrixWorld);ray.ray.origin.setFromMatrixPosition(c.matrixWorld);ray.ray.direction.set(0,0,-1).applyMatrix4(m);
+    const h=ray.intersectObjects([...clickables,ground],false)[0];if(!h)return;
+    if(h.object===ground){if(canStand(h.point.x,h.point.z)){P.pos.set(h.point.x,0,h.point.z);rig.position.set(h.point.x,0,h.point.z)}}
+    else if(h.object.userData.kel){highlight(h.object);const k=h.object.userData.kel;const v=k.d[hz];hzTitle.material=label(`${k.n}: ${v?'risiko '+v.risk:'tidak terdampak'}`,{size:56,w:1.6}).material}
+    else if(h.object.userData.act&&!h.object.userData.kel){/* panel: tampilkan judul di atas */}});
+  return c});
+
+/* ---------- masuk ---------- */
+const nameIn=$('#nameIn'),enter=$('#enter');nameIn.value=store.get('name','');
+nameIn.addEventListener('keydown',e=>{if(e.key==='Enter'&&!enter.disabled)enter.click()});
+enter.onclick=()=>{myName=(nameIn.value.trim()||'Penjelajah').slice(0,24);store.set('name',myName);
+  nameTag=label(myName,{size:40,w:.34});scene.add(nameTag);
+  $('#intro').hidden=true;uiOpen=false;started=true;doneN=goals().filter(x=>x.v>=x.m).length;checkGoals();visitZone('Plaza');
+  toast(`Selamat datang, ${myName}. Klik blok kelurahan di maket untuk melihat datanya.`)};
+
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+manager.onLoad=()=>{$('#loading').hidden=true;enter.disabled=false};
+loadData().catch(err=>{console.error(err);toast('Data maket gagal dimuat. Muat ulang halaman.')});
+// cadangan bila tak ada tekstur yang perlu dimuat
+setTimeout(()=>{if(enter.disabled){$('#loading').hidden=true;enter.disabled=false}},12000);
+teleport(0,21,0); // menghadap utara ke maket, kamera di selatan avatar
+renderer.setAnimationLoop(()=>{const dt=Math.min(clock.getDelta(),.05);update(dt);renderer.render(scene,camera)});
+</script>
+
+</body></html>
